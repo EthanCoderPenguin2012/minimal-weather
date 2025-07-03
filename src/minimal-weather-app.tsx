@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, Sun, CloudRain, CloudSnow, Wind, Eye, Droplets, Thermometer, MapPin, Search, Loader, Settings, ArrowLeft, Map } from 'lucide-react';
+import './animations.css';
 
 const WeatherApp = () => {
   const [weather, setWeather] = useState(null);
@@ -111,7 +112,9 @@ const WeatherApp = () => {
             pressure: currentData.data.pressure,
             uvIndex: currentData.data.uvIndex || 0,
             forecast,
-            hourlyForecast
+            hourlyForecast,
+            aqi: 59, // Mock AQI value
+            pollen: 75, // Mock Pollen value
           };
         }
       }
@@ -148,7 +151,7 @@ const WeatherApp = () => {
         time: hour,
         temperature: Math.round(baseTemp + tempVariation),
         condition: mapWeatherCondition(currentData.weather[0].id),
-        humidity: Math.max(20, Math.min(100, currentData.main.humidity + Math.random() * 20 - 10))
+        humidity: Math.round(Math.max(20, Math.min(100, currentData.main.humidity + Math.random() * 20 - 10)))
       };
     });
     
@@ -171,7 +174,9 @@ const WeatherApp = () => {
         pressure: 9001,
         uvIndex: 42,
         forecast: forecast.map(day => ({ ...day, high: 999, low: -999, condition: 'snowy' })),
-        hourlyForecast: Array(12).fill(null).map((_, i) => ({ time: i, temperature: 999, condition: 'snowy', humidity: 420 }))
+        hourlyForecast: Array(12).fill(null).map((_, i) => ({ time: i, temperature: 999, condition: 'snowy', humidity: 420 })),
+        aqi: 59, // Mock AQI value
+        pollen: 75, // Mock Pollen value
       };
     }
     
@@ -190,7 +195,9 @@ const WeatherApp = () => {
       pressure: currentData.main.pressure,
       uvIndex: 0,
       forecast,
-      hourlyForecast
+      hourlyForecast,
+      aqi: 59, // Mock AQI value
+      pollen: 75, // Mock Pollen value
     };
   };
 
@@ -385,12 +392,20 @@ const WeatherApp = () => {
           </div>
         )}
         <div className="absolute inset-0 opacity-30">
-          {[...Array(20)].map((_, i) => (
-            <div key={i} className={`absolute w-2 h-2 bg-white/20 rounded-full animate-float`} style={{
+          {[...Array(15)].map((_, i) => (
+            <div key={i} className={`absolute bg-white/10 rounded-full animate-bubble animate-liquid`} style={{
+              left: `${Math.random() * 100}%`,
+              width: `${20 + Math.random() * 40}px`,
+              height: `${20 + Math.random() * 40}px`,
+              animationDelay: `${Math.random() * 8}s`,
+              animationDuration: `${8 + Math.random() * 4}s`
+            }}></div>
+          ))}
+          {[...Array(8)].map((_, i) => (
+            <div key={`shimmer-${i}`} className={`absolute w-32 h-32 bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-full animate-shimmer animate-float`} style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`
+              animationDelay: `${Math.random() * 3}s`
             }}></div>
           ))}
         </div>
@@ -449,12 +464,12 @@ const WeatherApp = () => {
               onFocus={() => location.length >= 2 && setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder="Search city..."
-              className="w-full px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base bg-white/10 backdrop-blur-xl rounded-2xl text-white placeholder-white/60 border border-white/20 shadow-lg focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all duration-300 transform hover:scale-105 focus:animate-pulse" style={{backdropFilter: 'blur(16px) saturate(150%)'}}
+              className="w-full px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base glass-card rounded-2xl text-white placeholder-white/60 shadow-lg focus:outline-none animate-shimmer"
             />
             <button
               onClick={() => searchWeather()}
               disabled={loading}
-              className="absolute right-2 top-2 p-2 bg-white/15 backdrop-blur-lg rounded-xl shadow-md hover:bg-white/25 hover:scale-110 hover:rotate-12 transition-all duration-300 transform active:scale-95" style={{backdropFilter: 'blur(12px) saturate(140%)'}}
+              className="absolute right-2 top-2 p-2 glass-button rounded-xl shadow-md animate-pulse-glow"
             >
               {loading ? (
                 <Loader className="w-5 h-5 text-white animate-spin animate-pulse" />
@@ -487,7 +502,7 @@ const WeatherApp = () => {
 
         {currentScreen === 'weather' && weather && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-4 sm:p-8 mb-6 sm:mb-8 border border-white/20 shadow-2xl hover:bg-white/15 hover:border-white/30 transition-all duration-300 transform hover:scale-[1.02] hover:rotate-1 hover:shadow-3xl animate-fade-in-up" style={{backdropFilter: 'blur(20px) saturate(180%)'}}>
+            <div className="glass-card rounded-3xl p-4 sm:p-8 mb-6 sm:mb-8 shadow-2xl animate-glass-morph animate-pulse-glow">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
                 <div className="flex items-center space-x-3">
                   <MapPin className="w-5 h-5 text-white/70" />
@@ -506,11 +521,11 @@ const WeatherApp = () => {
 
               <div className="flex items-center justify-between">
                 <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                  <div className="animate-bounce-slow hover:animate-spin-slow transition-all duration-500">
+                  <div className="animate-float hover:animate-pulse transition-all duration-500">
                     {getWeatherIcon(weather.condition, 'w-16 h-16')}
                   </div>
                   <div>
-                    <div className="text-4xl sm:text-6xl font-ultralight text-white mb-2 animate-number-count hover:animate-pulse text-center sm:text-left">
+                    <div className="text-4xl sm:text-6xl font-ultralight text-white mb-2 animate-number-pop hover:animate-shimmer text-center sm:text-left cursor-pointer">
                       {weather.temperature}°
                     </div>
                     <div className="text-white/70 text-lg font-light">
@@ -532,7 +547,7 @@ const WeatherApp = () => {
                 { icon: Eye, label: 'Visibility', value: `${weather.visibility} km` },
                 { icon: Thermometer, label: 'Pressure', value: `${weather.pressure} hPa` }
               ].map((item, index) => (
-                <div key={index} className="bg-white/8 backdrop-blur-xl rounded-2xl p-4 border border-white/15 shadow-lg hover:bg-white/12 hover:border-white/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 hover:rotate-2 animate-in fade-in slide-in-from-bottom-2 duration-300 hover:shadow-xl" style={{animationDelay: `${index * 100}ms`, backdropFilter: 'blur(16px) saturate(150%)'}}>
+                <div key={index} className="glass-card rounded-2xl p-4 shadow-lg animate-float" style={{animationDelay: `${index * 200}ms`}}>
                   <div className="flex items-center space-x-3 mb-2">
                     <item.icon className="w-5 h-5 text-white/70 hover:animate-bounce transition-all duration-200" />
                     <span className="text-white/70 text-sm">{item.label}</span>
@@ -547,7 +562,7 @@ const WeatherApp = () => {
               <div className="overflow-x-auto">
                 <div className="flex space-x-3 pb-2" style={{minWidth: 'max-content'}}>
                   {weather.hourlyForecast.slice(0, 12).map((hour, index) => (
-                    <div key={index} className="flex-shrink-0 text-center bg-white/10 rounded-2xl p-3 min-w-[70px] hover:bg-white/15 transition-all duration-300">
+                    <div key={index} className="flex-shrink-0 text-center glass-card rounded-2xl p-3 min-w-[70px] animate-float" style={{animationDelay: `${index * 100}ms`}}>
                       <div className="text-white/70 text-xs mb-2">
                         {hour.time === new Date().getHours() ? 'Now' : `${hour.time}:00`}
                       </div>
@@ -566,7 +581,7 @@ const WeatherApp = () => {
               <h3 className="text-white/90 text-lg font-light mb-6">5-Day Forecast</h3>
               <div className="grid grid-cols-5 gap-4">
                 {weather.forecast.map((day, index) => (
-                  <div key={index} onClick={() => setSelectedDay({...day, index})} className="text-center hover:bg-white/10 rounded-xl p-3 transition-all duration-300 transform hover:scale-110 hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300 hover:shadow-md cursor-pointer" style={{animationDelay: `${300 + index * 100}ms`}}>
+                  <div key={index} onClick={() => setSelectedDay({...day, index})} className="text-center glass-button rounded-xl p-3 cursor-pointer animate-float" style={{animationDelay: `${index * 150}ms`}}>
                     <div className="text-white/70 text-sm mb-3">{day.day}</div>
                     <div className="flex justify-center mb-3 transform hover:scale-125 hover:rotate-12 transition-transform duration-200 animate-float">
                       {getWeatherIcon(day.condition, 'w-8 h-8')}
@@ -585,24 +600,18 @@ const WeatherApp = () => {
                 <h3 className="text-white/90 text-lg font-light mb-6">Temperature Trend</h3>
                 <div className="relative h-32">
                   <svg className="w-full h-full" viewBox="0 0 300 120">
-                    <defs>
-                      <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
-                        <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
-                      </linearGradient>
-                    </defs>
                     {weather.forecast.map((day, index) => {
                       const x = (index * 60) + 30;
-                      const highY = 120 - ((day.high - 10) * 2);
-                      const lowY = 120 - ((day.low - 10) * 2);
+                      const highY = 30 + ((30 - day.high) * 1.5);
+                      const lowY = 30 + ((30 - day.low) * 1.5);
                       return (
                         <g key={index}>
-                          <circle cx={x} cy={highY} r="4" fill="#ff6b6b" className="animate-chart-point" style={{animationDelay: `${index * 200}ms`}} />
-                          <circle cx={x} cy={lowY} r="4" fill="#4ecdc4" className="animate-chart-point" style={{animationDelay: `${index * 200 + 100}ms`}} />
+                          <circle cx={x} cy={highY} r="3" fill="rgba(239, 68, 68, 0.8)" />
+                          <circle cx={x} cy={lowY} r="3" fill="rgba(59, 130, 246, 0.8)" />
                           {index < weather.forecast.length - 1 && (
                             <>
-                              <line x1={x} y1={highY} x2={(index + 1) * 60 + 30} y2={120 - ((weather.forecast[index + 1].high - 10) * 2)} stroke="#ff6b6b" strokeWidth="3" opacity="0.8" className="animate-draw-line" style={{animationDelay: `${index * 300}ms`}} />
-                              <line x1={x} y1={lowY} x2={(index + 1) * 60 + 30} y2={120 - ((weather.forecast[index + 1].low - 10) * 2)} stroke="#4ecdc4" strokeWidth="3" opacity="0.8" className="animate-draw-line" style={{animationDelay: `${index * 300 + 150}ms`}} />
+                              <line x1={x} y1={highY} x2={(index + 1) * 60 + 30} y2={30 + ((30 - weather.forecast[index + 1].high) * 1.5)} stroke="rgba(239, 68, 68, 0.6)" strokeWidth="2" />
+                              <line x1={x} y1={lowY} x2={(index + 1) * 60 + 30} y2={30 + ((30 - weather.forecast[index + 1].low) * 1.5)} stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2" />
                             </>
                           )}
                         </g>
@@ -618,405 +627,124 @@ const WeatherApp = () => {
               </div>
               
               <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '500ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Weather Stats</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/70 text-sm">Humidity</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 h-2 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                        <div className="h-full bg-blue-500 rounded-full transition-all duration-800" style={{width: `${weather.humidity}%`}}></div>
-                      </div>
-                      <span className="text-white text-sm">{weather.humidity}%</span>
-                    </div>
+                <h3 className="text-white/90 text-lg font-light mb-6">Precipitation</h3>
+                <div className="text-center">
+                  <div className="text-white text-3xl font-light mb-2">0%</div>
+                  <div className="text-white/60 text-sm mb-4">No Rain Expected</div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-400 rounded-full transition-all duration-1000" style={{width: '0%'}}></div>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/70 text-sm">Wind Speed</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 h-2 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                        <div className="h-full bg-green-500 rounded-full transition-all duration-800" style={{width: `${Math.min(weather.windSpeed * 2, 100)}%`}}></div>
-                      </div>
-                      <span className="text-white text-sm">{weather.windSpeed} km/h</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/70 text-sm">Visibility</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 h-2 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                        <div className="h-full bg-purple-500 rounded-full transition-all duration-800" style={{width: `${Math.min(weather.visibility * 10, 100)}%`}}></div>
-                      </div>
-                      <span className="text-white text-sm">{weather.visibility} km</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6">
-                    <div className="text-white/70 text-sm mb-4 text-center">Pressure</div>
-                    <div className="relative w-32 h-32 mx-auto">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                        <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="6" />
-                        <circle cx="60" cy="60" r="45" fill="none" stroke="url(#pressureGradient)" strokeWidth="6" strokeDasharray="283" strokeDashoffset={283 - (((weather.pressure - 980) / 60) * 283)} strokeLinecap="round" className="animate-pressure-dial" />
-                        <defs>
-                          <linearGradient id="pressureGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#f59e0b" />
-                            <stop offset="50%" stopColor="#eab308" />
-                            <stop offset="100%" stopColor="#ef4444" />
-                          </linearGradient>
-                        </defs>
-                        <g className="animate-dial-needle" style={{'--pressure-angle': `${((weather.pressure - 980) / 60) * 180 - 90}deg`}}>
-                          <line x1="60" y1="60" x2="60" y2="25" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
-                          <circle cx="60" cy="60" r="4" fill="#ffffff" />
-                        </g>
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center mt-8">
-                          <div className="text-white text-lg font-light">{weather.pressure}</div>
-                          <div className="text-white/60 text-xs">hPa</div>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-2 left-2 text-xs text-white/50">Low</div>
-                      <div className="absolute bottom-2 right-2 text-xs text-white/50">High</div>
-                    </div>
-                  </div>
+                  <div className="text-white/60 text-xs mt-4">Light rain possible tomorrow</div>
                 </div>
               </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-8">
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '600ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Humidity</h3>
-                <div className="relative w-32 h-32 mx-auto">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="url(#humidityGradient)" strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - ((weather.humidity / 100) * 283)} strokeLinecap="round" className="animate-pressure-dial" />
-                    <defs>
-                      <linearGradient id="humidityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#06b6d4" />
-                        <stop offset="50%" stopColor="#0891b2" />
-                        <stop offset="100%" stopColor="#0e7490" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-white text-xl font-light">{weather.humidity}%</div>
-                      <div className="text-white/60 text-xs">Humidity</div>
-                    </div>
-                  </div>
-                </div>
+              {/* UV Index Card - Arc Gauge */}
+              <div className="glass-card rounded-3xl p-6 shadow-xl flex flex-col items-center animate-float animate-pulse-glow" style={{animationDelay: '650ms'}}>
+                <h3 className="text-white/90 text-lg font-light mb-4">UV</h3>
+                <ArcGauge value={weather.uvIndex} max={11} colorStops={['#22c55e', '#eab308', '#f97316', '#dc2626']} labels={['Low', 'Moderate', 'High', 'Very High', 'Extreme']} />
+                <div className="text-white/60 text-xs mt-2">Maximum UV exposure for today will be moderate, expected at 13:00.</div>
               </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '650ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">UV Index</h3>
-                <div className="relative w-32 h-32 mx-auto">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="url(#uvGradient)" strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - ((Math.max(weather.uvIndex, 1) / 11) * 283)} strokeLinecap="round" className="animate-pressure-dial" style={{animationDelay: '0.2s'}} />
-                    <defs>
-                      <linearGradient id="uvGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#22c55e" />
-                        <stop offset="30%" stopColor="#eab308" />
-                        <stop offset="60%" stopColor="#f97316" />
-                        <stop offset="100%" stopColor="#dc2626" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-white text-xl font-light">{Math.max(weather.uvIndex, 1)}</div>
-                      <div className="text-white/60 text-xs">
-                        {weather.uvIndex <= 2 ? 'Low' : weather.uvIndex <= 5 ? 'Moderate' : weather.uvIndex <= 7 ? 'High' : weather.uvIndex <= 10 ? 'Very High' : 'Extreme'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
+              {/* AQI Card - Arc Gauge */}
+              <div className="glass-card rounded-3xl p-6 shadow-xl flex flex-col items-center animate-float animate-pulse-glow" style={{animationDelay: '900ms'}}>
+                <h3 className="text-white/90 text-lg font-light mb-4">AQI</h3>
+                <ArcGauge value={weather.aqi} max={200} colorStops={['#22c55e', '#eab308', '#f97316', '#dc2626']} labels={['Good', 'Moderate', 'Unhealthy', 'Very Unhealthy']} />
+                <div className="text-white/60 text-xs mt-2">Deteriorating air quality with primary pollutant: O₃ 27 ppb.</div>
               </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '700ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Hourly Forecast</h3>
-                <div className="relative h-24">
-                  <svg className="w-full h-full" viewBox="0 0 240 80">
-                    <defs>
-                      <linearGradient id="hourlyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
-                        <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
-                      </linearGradient>
-                    </defs>
-                    {[...Array(6)].map((_, index) => {
-                      const x = index * 40 + 20;
-                      const temp = weather.temperature + Math.sin(index) * 3;
-                      const y = 80 - ((temp - weather.temperature + 10) * 2);
-                      return (
-                        <g key={index}>
-                          <rect x={x-15} y={80} width="30" height={80-y} fill="url(#hourlyGradient)" rx="4" className="animate-bar-grow hover:animate-bounce" style={{animationDelay: `${index * 150}ms`}} />
-                          <text x={x} y="75" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="8">{index * 3}h</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
+
+              {/* Pollen Card - Arc Gauge */}
+              <div className="glass-card rounded-3xl p-6 shadow-xl flex flex-col items-center animate-float animate-pulse-glow" style={{animationDelay: '950ms'}}>
+                <h3 className="text-white/90 text-lg font-light mb-4">Pollen</h3>
+                <ArcGauge value={weather.pollen} max={200} colorStops={['#22c55e', '#eab308', '#dc2626']} labels={['Low', 'Moderate', 'High']} />
+                <div className="text-white/60 text-xs mt-2">Similar to yesterday. Main allergy: Grass.</div>
               </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '800ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Wind Speed</h3>
-                <div className="relative w-32 h-32 mx-auto">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="url(#windGradient)" strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - ((Math.min(weather.windSpeed, 50) / 50) * 283)} strokeLinecap="round" className="animate-pressure-dial" style={{animationDelay: '0.4s'}} />
-                    <defs>
-                      <linearGradient id="windGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#10b981" />
-                        <stop offset="50%" stopColor="#06b6d4" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-white text-lg font-light">{weather.windSpeed}</div>
-                      <div className="text-white/60 text-xs">km/h</div>
-                    </div>
-                  </div>
-                </div>
+
+              {/* Visibility Card - Stacked Bars */}
+              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl flex flex-col items-center" style={{animationDelay: '700ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
+                <h3 className="text-white/90 text-lg font-light mb-4">Visibility</h3>
+                <StackedBar value={weather.visibility} max={70} steps={5} color="bg-green-400" />
+                <div className="text-white text-2xl font-light mt-2">{weather.visibility} km</div>
+                <div className="text-white/70 text-sm">Excellent</div>
+                <div className="text-white/60 text-xs mt-2">Improving with a peak visibility distance of {weather.visibility} km expected at 10:34. Excellent visibility.</div>
               </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '850ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Air Quality</h3>
-                <div className="relative w-32 h-32 mx-auto">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="url(#airGradient)" strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - ((weather.visibility / 15) * 283)} strokeLinecap="round" className="animate-pressure-dial" style={{animationDelay: '0.6s'}} />
-                    <defs>
-                      <linearGradient id="airGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#dc2626" />
-                        <stop offset="50%" stopColor="#f59e0b" />
-                        <stop offset="100%" stopColor="#22c55e" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-white text-lg font-light">{weather.visibility}</div>
-                      <div className="text-white/60 text-xs">km vis</div>
-                    </div>
-                  </div>
-                </div>
+
+              {/* Pressure Card - Arc Gauge */}
+              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl flex flex-col items-center" style={{animationDelay: '800ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
+                <h3 className="text-white/90 text-lg font-light mb-4">Pressure</h3>
+                <ArcGauge value={weather.pressure - 950} max={100} colorStops={['#a78bfa']} labels={['Rising']} />
+                <div className="text-white text-2xl font-light mt-2">{weather.pressure} mb</div>
+                <div className="text-white/60 text-xs mt-2">Rising slowly in the last 3 hours. Expected to rise slowly in the next 3 hours.</div>
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
               <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '900ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
                 <h3 className="text-white/90 text-lg font-light mb-6">Weekly Overview</h3>
-                <div className="relative h-40">
-                  <svg className="w-full h-full" viewBox="0 0 350 150">
-                    <defs>
-                      <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(78, 205, 196, 0.3)" />
-                        <stop offset="100%" stopColor="rgba(78, 205, 196, 0.1)" />
-                      </linearGradient>
-                    </defs>
-                    {weather.forecast.map((day, index) => {
-                      const x = index * 70 + 35;
-                      const highY = 30 + ((35 - day.high) * 2);
-                      const lowY = 30 + ((35 - day.low) * 2);
-                      return (
-                        <g key={index}>
-                          <rect x={x-20} y={lowY} width="40" height={0} fill="url(#areaGradient)" rx="4" className="animate-area-fill" style={{animationDelay: `${index * 200}ms`, '--final-height': `${lowY - highY}px`, '--final-y': `${highY}px`}} />
-                          <circle cx={x} cy={highY} r="5" fill="#ff6b6b" className="animate-chart-point" style={{animationDelay: `${index * 250}ms`}} />
-                          <circle cx={x} cy={lowY} r="5" fill="#4ecdc4" className="animate-chart-point" style={{animationDelay: `${index * 250 + 100}ms`}} />
-                          <text x={x} y="145" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">{day.day.slice(0, 3)}</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-              </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '1000ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Comfort Index</h3>
-                <div className="space-y-6">
-                  <div className="relative">
-                    <div className="flex justify-between text-sm text-white/70 mb-2">
-                      <span>Temperature</span>
-                      <span>{weather.temperature}°</span>
-                    </div>
-                    <div className="w-full h-2 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                      <div className="h-full bg-orange-500 rounded-full transition-all duration-800" style={{width: `${((weather.temperature + 10) / 50) * 100}%`}}></div>
-                    </div>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="flex justify-between text-sm text-white/70 mb-2">
-                      <span>Feels Like</span>
-                      <span>{weather.feelsLike}°</span>
-                    </div>
-                    <div className="w-full h-2 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                      <div className="h-full bg-yellow-500 rounded-full transition-all duration-800" style={{width: `${((weather.feelsLike + 10) / 50) * 100}%`}}></div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 p-4 bg-white/10 rounded-xl">
-                    <div className="text-center">
-                      <div className="text-2xl font-light text-white mb-1">
-                        {weather.humidity > 70 ? 'High' : weather.humidity > 40 ? 'Moderate' : 'Low'}
+                <div className="space-y-3">
+                  {weather.forecast.map((day, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-white/70 text-sm w-12">{day.day.slice(0, 3)}</span>
+                      <div className="flex items-center space-x-2 flex-1 mx-4">
+                        {getWeatherIcon(day.condition, 'w-4 h-4')}
+                        <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-blue-400 to-red-400 rounded-full transition-all duration-1000" style={{width: `${((day.high + 20) / 60) * 100}%`}}></div>
+                        </div>
                       </div>
-                      <div className="text-white/60 text-sm">Comfort Level</div>
+                      <span className="text-white text-sm">{day.high}°/{day.low}°</span>
                     </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '1200ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
+                <h3 className="text-white/90 text-lg font-light mb-6">Yearly Average</h3>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <div className="text-red-400 text-sm font-light mb-1">Hottest</div>
+                    <div className="text-white text-2xl font-light">{Math.round(weather.temperature + 15)}°</div>
+                    <div className="text-white/60 text-xs">July</div>
+                  </div>
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <div className="text-blue-400 text-sm font-light mb-1">Coldest</div>
+                    <div className="text-white text-2xl font-light">{Math.round(weather.temperature - 15)}°</div>
+                    <div className="text-white/60 text-xs">January</div>
                   </div>
                 </div>
               </div>
+              
+
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 duration-500 liquid-glass" style={{animationDelay: '1200ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Yearly Temperature</h3>
-                <div className="relative h-40">
-                  <svg className="w-full h-full" viewBox="0 0 360 150">
-                    {[...Array(12)].map((_, index) => {
-                      const x = index * 30 + 15;
-                      const temp = weather.temperature + Math.sin((index - 6) * Math.PI / 6) * 15;
-                      const y = 150 - ((temp + 20) * 2);
-                      return (
-                        <g key={index}>
-                          <circle cx={x} cy={y} r="3" fill={temp > weather.temperature ? '#ef4444' : '#3b82f6'} className="animate-chart-point" style={{animationDelay: `${index * 100}ms`}} />
-                          {index < 11 && (
-                            <line x1={x} y1={y} x2={(index + 1) * 30 + 15} y2={150 - ((weather.temperature + Math.sin(((index + 1) - 6) * Math.PI / 6) * 15 + 20) * 2)} stroke="#ffffff" strokeWidth="2" opacity="0.6" className="animate-draw-line" style={{animationDelay: `${index * 150}ms`}} />
-                          )}
-                          <text x={x} y="145" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="8">{['J','F','M','A','M','J','J','A','S','O','N','D'][index]}</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-red-400 font-light">Hottest</div>
-                    <div className="text-white">July: {Math.round(weather.temperature + 15)}°</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-blue-400 font-light">Coldest</div>
-                    <div className="text-white">January: {Math.round(weather.temperature - 15)}°</div>
+            <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500 mt-8" style={{animationDelay: '1400ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
+              <h3 className="text-white/90 text-lg font-light mb-6">Climate Summary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-white text-2xl font-light mb-1">{weather.temperature}°</div>
+                  <div className="text-white/60 text-sm mb-2">Avg Temperature</div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-red-400 rounded-full transition-all duration-1000" style={{width: `${((weather.temperature + 20) / 60) * 100}%`}}></div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 duration-500 liquid-glass" style={{animationDelay: '1300ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Precipitation & Wind</h3>
-                <div className="relative h-40">
-                  <svg className="w-full h-full" viewBox="0 0 360 150">
-                    {[...Array(12)].map((_, index) => {
-                      const x = index * 30 + 15;
-                      const rain = 20 + Math.sin(index * Math.PI / 3) * 15;
-                      const wind = weather.windSpeed + Math.cos(index * Math.PI / 4) * 8;
-                      const rainY = 150 - (rain * 2);
-                      const windY = 150 - (wind * 3);
-                      return (
-                        <g key={index}>
-                          <rect x={x-8} y={rainY} width="16" height={150-rainY} fill="rgba(59, 130, 246, 0.6)" rx="2" className="animate-bar-grow" style={{animationDelay: `${index * 100}ms`}} />
-                          <circle cx={x} cy={windY} r="2" fill="#10b981" className="animate-chart-point" style={{animationDelay: `${index * 120}ms`}} />
-                          <text x={x} y="145" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="8">{['J','F','M','A','M','J','J','A','S','O','N','D'][index]}</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-blue-400 font-light">Rainiest</div>
-                    <div className="text-white">March: 35mm</div>
+                <div className="text-center">
+                  <div className="text-white text-2xl font-light mb-1">{weather.humidity}%</div>
+                  <div className="text-white/60 text-sm mb-2">Avg Humidity</div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-400 rounded-full transition-all duration-1000" style={{width: `${weather.humidity}%`}}></div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-green-400 font-light">Windiest</div>
-                    <div className="text-white">November: {Math.round(weather.windSpeed + 8)} km/h</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-white text-2xl font-light mb-1">{weather.windSpeed}</div>
+                  <div className="text-white/60 text-sm mb-2">Avg Wind (km/h)</div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-400 rounded-full transition-all duration-1000" style={{width: `${Math.min(weather.windSpeed * 2, 100)}%`}}></div>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 duration-500 liquid-glass" style={{animationDelay: '1400ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Climate Averages</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70 text-sm">Avg Temperature</span>
-                    <span className="text-white font-light">{weather.temperature}°</span>
-                  </div>
-                  <div className="w-full h-1 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                    <div className="h-full bg-red-500 rounded-full transition-all duration-800" style={{width: `${((weather.temperature + 20) / 60) * 100}%`}}></div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70 text-sm">Avg Humidity</span>
-                    <span className="text-white font-light">{weather.humidity}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                    <div className="h-full bg-cyan-500 rounded-full transition-all duration-800" style={{width: `${weather.humidity}%`}}></div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70 text-sm">Avg Wind</span>
-                    <span className="text-white font-light">{weather.windSpeed} km/h</span>
-                  </div>
-                  <div className="w-full h-1 bg-white/10 backdrop-blur-sm rounded-full overflow-hidden border border-white/20">
-                    <div className="h-full bg-teal-500 rounded-full transition-all duration-800" style={{width: `${Math.min(weather.windSpeed * 2, 100)}%`}}></div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 duration-500 liquid-glass" style={{animationDelay: '1500ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Seasonal Breakdown</h3>
-                <div className="relative w-32 h-32 mx-auto mb-4">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="#22c55e" strokeWidth="8" strokeDasharray="71 212" strokeLinecap="round" className="animate-pressure-dial" />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="#eab308" strokeWidth="8" strokeDasharray="71 212" strokeDashoffset="-71" strokeLinecap="round" className="animate-pressure-dial" style={{animationDelay: '0.2s'}} />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="#f97316" strokeWidth="8" strokeDasharray="71 212" strokeDashoffset="-142" strokeLinecap="round" className="animate-pressure-dial" style={{animationDelay: '0.4s'}} />
-                    <circle cx="60" cy="60" r="45" fill="none" stroke="#3b82f6" strokeWidth="8" strokeDasharray="70 213" strokeDashoffset="-213" strokeLinecap="round" className="animate-pressure-dial" style={{animationDelay: '0.6s'}} />
-                  </svg>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-white/80">Spring 25%</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-white/80">Summer 25%</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    <span className="text-white/80">Autumn 25%</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-white/80">Winter 25%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 duration-500 liquid-glass" style={{animationDelay: '1600ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
-                <h3 className="text-white/90 text-lg font-light mb-6">Weather Records</h3>
-                <div className="space-y-4">
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <div className="text-red-400 text-sm font-light">Highest Temp</div>
-                    <div className="text-white text-lg">{Math.round(weather.temperature + 25)}°</div>
-                    <div className="text-white/60 text-xs">July 2023</div>
-                  </div>
-                  
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <div className="text-blue-400 text-sm font-light">Lowest Temp</div>
-                    <div className="text-white text-lg">{Math.round(weather.temperature - 25)}°</div>
-                    <div className="text-white/60 text-xs">January 2022</div>
-                  </div>
-                  
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <div className="text-green-400 text-sm font-light">Max Wind</div>
-                    <div className="text-white text-lg">{Math.round(weather.windSpeed + 35)} km/h</div>
-                    <div className="text-white/60 text-xs">March 2023</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+
+
           </div>
         )}
         
@@ -1339,3 +1067,67 @@ const WeatherApp = () => {
 };
 
 export default WeatherApp;
+
+// Clean chart components matching liquid glass design
+const ArcGauge = ({ value, max, colorStops, labels }) => {
+  const percent = Math.min(Math.max(value, 0), max) / max;
+  const circumference = 2 * Math.PI * 45;
+  const strokeDasharray = circumference;
+  const strokeDashoffset = circumference - (percent * circumference);
+  
+  const getColor = () => {
+    if (colorStops.length === 1) return colorStops[0];
+    const idx = Math.min(Math.floor(percent * colorStops.length), colorStops.length - 1);
+    return colorStops[idx];
+  };
+  
+  const getLabel = () => {
+    if (labels.length === 1) return labels[0];
+    const idx = Math.min(Math.floor(percent * labels.length), labels.length - 1);
+    return labels[idx];
+  };
+  
+  return (
+    <div className="relative w-32 h-32 mx-auto">
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+        <circle 
+          cx="60" cy="60" r="45" fill="none" 
+          stroke={getColor()} strokeWidth="8" 
+          strokeDasharray={strokeDasharray} 
+          strokeDashoffset={strokeDashoffset} 
+          strokeLinecap="round" 
+          className="transition-all duration-1500 ease-out animate-chart-draw"
+          style={{filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.3))'}}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-2xl font-light">{value}</div>
+          <div className="text-white/60 text-xs">{getLabel()}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StackedBar = ({ value, max, steps, color }) => {
+  return (
+    <div className="flex flex-col items-center space-y-1">
+      {Array.from({ length: steps }, (_, i) => {
+        const stepValue = ((i + 1) * max) / steps;
+        const filled = value >= stepValue;
+        const width = `${20 + i * 8}px`;
+        return (
+          <div 
+            key={i} 
+            className={`h-2 rounded-full transition-all duration-500 ${
+              filled ? color : 'bg-white/20'
+            }`}
+            style={{ width }}
+          />
+        );
+      }).reverse()}
+    </div>
+  );
+};
