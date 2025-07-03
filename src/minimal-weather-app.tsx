@@ -7,6 +7,8 @@ const WeatherApp = () => {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState('');
   const [error, setError] = useState('');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -56,11 +58,19 @@ const WeatherApp = () => {
   };
 
   const fetchWeatherData = async (city) => {
+    setApiError(null);
+    
     try {
       if (AMBEE_API_KEY) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const geoResponse = await fetch(`https://api.ambeedata.com/weather/latest/by-city?city=${city}`, {
-          headers: { 'x-api-key': AMBEE_API_KEY }
+          headers: { 'x-api-key': AMBEE_API_KEY },
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         if (geoResponse.ok) {
           const currentData = await geoResponse.json();
@@ -119,19 +129,52 @@ const WeatherApp = () => {
         }
       }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please try again');
+      }
       console.log('Ambee API failed, falling back to OpenWeatherMap');
     }
     
     // Fallback to OpenWeatherMap
-    const [currentResponse, forecastResponse] = await Promise.all([
-      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${OPENWEATHER_API_KEY}&units=metric`),
-      fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${OPENWEATHER_API_KEY}&units=metric`)
-    ]);
-    
-    if (!currentResponse.ok) throw new Error('City not found');
-    
-    const currentData = await currentResponse.json();
-    const forecastData = await forecastResponse.json();
+    let currentData, forecastData;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const [currentResponse, forecastResponse] = await Promise.all([
+        fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${OPENWEATHER_API_KEY}&units=metric`, {
+          signal: controller.signal
+        }),
+        fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${OPENWEATHER_API_KEY}&units=metric`, {
+          signal: controller.signal
+        })
+      ]);
+      
+      clearTimeout(timeoutId);
+      
+      if (!currentResponse.ok) {
+        if (currentResponse.status === 404) {
+          throw new Error('City not found - please check spelling');
+        } else if (currentResponse.status === 401) {
+          throw new Error('API key invalid - please check configuration');
+        } else if (currentResponse.status >= 500) {
+          throw new Error('Weather service temporarily unavailable');
+        }
+        throw new Error('Failed to fetch weather data');
+      }
+      
+      currentData = await currentResponse.json();
+      forecastData = await forecastResponse.json();
+      
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please check your connection');
+      }
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network error - please check your internet connection');
+      }
+      throw error;
+    }
     
     const forecast = forecastData.list
       .filter((_, index) => index % 8 === 0)
@@ -234,18 +277,25 @@ const WeatherApp = () => {
   };
 
   const searchWeather = async (city = location) => {
-    if (!city.trim()) return;
+    if (!city.trim()) {
+      setError('Please enter a city name');
+      return;
+    }
     
     setLoading(true);
     setError('');
+    setApiError(null);
     setShowSuggestions(false);
     
     try {
       const weatherData = await fetchWeatherData(city);
       setWeather(weatherData);
       setLocation('');
+      setError('');
     } catch (error) {
-      setError('City not found or API error');
+      console.error('Weather fetch error:', error);
+      setError(error.message || 'Failed to fetch weather data');
+      setApiError(error);
     } finally {
       setLoading(false);
     }
@@ -317,18 +367,26 @@ const WeatherApp = () => {
     };
     
     const loadInitialWeather = async () => {
+      setIsInitialLoading(true);
       try {
         const weatherData = await fetchWeatherData(settings.defaultLocation);
         setWeather(weatherData);
+        setError('');
       } catch (error) {
-        setError('Failed to load weather data');
+        console.error('Initial weather load error:', error);
+        setError(error.message || 'Failed to load initial weather data');
+        setApiError(error);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
     
     loadSettings();
-    
     loadCities();
-    loadInitialWeather();
+    
+    // Add delay to prevent too many API calls on mount
+    const timer = setTimeout(loadInitialWeather, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -472,7 +530,10 @@ const WeatherApp = () => {
               className="absolute right-2 top-2 p-2 glass-button rounded-xl shadow-md animate-pulse-glow"
             >
               {loading ? (
-                <Loader className="w-5 h-5 text-white animate-spin animate-pulse" />
+                <div className="relative">
+                  <Loader className="w-5 h-5 text-white animate-spin" />
+                  <div className="absolute inset-0 w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                </div>
               ) : (
                 <Search className="w-5 h-5 text-white" />
               )}
@@ -493,15 +554,37 @@ const WeatherApp = () => {
             )}
           </div>
           {error && (
-            <p className="text-center text-white/80 mt-3 bg-white/20 rounded-lg py-2 max-w-md mx-auto animate-in fade-in slide-in-from-top-1 duration-300">
-              {error}
-            </p>
+            <div className="text-center mt-4 max-w-md mx-auto animate-in fade-in slide-in-from-top-1 duration-300">
+              <div className="glass-card rounded-lg p-4 border-l-4 border-red-400">
+                <div className="flex items-center space-x-2">
+                  <span className="text-red-400">⚠️</span>
+                  <span className="text-white/90 text-sm">{error}</span>
+                </div>
+                {apiError && (
+                  <button 
+                    onClick={() => {setError(''); setApiError(null);}}
+                    className="mt-2 text-white/60 text-xs hover:text-white/80 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                )}
+              </div>
+            </div>
           )}
           </div>
         )}
 
-        {currentScreen === 'weather' && weather && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {currentScreen === 'weather' && (
+          <>
+            {isInitialLoading ? (
+              <LoadingSkeleton />
+            ) : error && !weather ? (
+              <ErrorDisplay 
+                error={error} 
+                onRetry={() => searchWeather(settings.defaultLocation)} 
+              />
+            ) : weather ? (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="glass-card rounded-3xl p-4 sm:p-8 mb-6 sm:mb-8 shadow-2xl animate-glass-morph animate-pulse-glow">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
                 <div className="flex items-center space-x-3">
@@ -743,9 +826,13 @@ const WeatherApp = () => {
                 </div>
               </div>
             </div>
-
-
-          </div>
+            </div>
+            ) : (
+              <div className="glass-card rounded-3xl p-8 text-center">
+                <div className="text-white/60 text-lg">No weather data available</div>
+              </div>
+            )}
+          </>
         )}
         
         {currentScreen === 'settings' && (
@@ -766,7 +853,7 @@ const WeatherApp = () => {
             </div>
             
             <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30">
-              <h2 className={`text-lg font-light text-white mb-4 ${settings.largeText ? 'text-xl' : ''}`}>Temperature Units</h2>
+              <h2 className={`text-lg font-light text-white mb-4 ${settings.largeText ? 'text-xl' : ''}`}>Units</h2>
               <select
                 value={settings.units}
                 onChange={(e) => {
@@ -1067,6 +1154,45 @@ const WeatherApp = () => {
 };
 
 export default WeatherApp;
+
+// Loading skeleton component
+const LoadingSkeleton = () => (
+  <div className="animate-pulse space-y-6">
+    <div className="glass-card rounded-3xl p-8">
+      <div className="flex items-center justify-between mb-6">
+        <div className="h-6 bg-white/20 rounded w-32"></div>
+        <div className="h-4 bg-white/20 rounded w-24"></div>
+      </div>
+      <div className="flex items-center space-x-6">
+        <div className="w-16 h-16 bg-white/20 rounded-full"></div>
+        <div className="space-y-2">
+          <div className="h-12 bg-white/20 rounded w-24"></div>
+          <div className="h-4 bg-white/20 rounded w-32"></div>
+        </div>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="glass-card rounded-2xl p-4 h-24"></div>
+      ))}
+    </div>
+  </div>
+);
+
+// Error display component
+const ErrorDisplay = ({ error, onRetry }) => (
+  <div className="glass-card rounded-3xl p-8 text-center">
+    <div className="text-red-400 text-6xl mb-4">⚠️</div>
+    <h3 className="text-white text-xl font-light mb-2">Oops! Something went wrong</h3>
+    <p className="text-white/70 mb-6">{error}</p>
+    <button 
+      onClick={onRetry}
+      className="glass-button px-6 py-3 rounded-xl text-white font-light hover:scale-105 transition-transform"
+    >
+      Try Again
+    </button>
+  </div>
+);
 
 // Clean chart components matching liquid glass design
 const ArcGauge = ({ value, max, colorStops, labels }) => {

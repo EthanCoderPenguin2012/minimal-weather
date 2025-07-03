@@ -1,7 +1,5 @@
 # Minimal Weather
 
-> [!NOTE]
-> Hey! We are currently transitioning from **OpenWeatherMap** to **Ambee** for our weather data API. This change will enhance the accuracy and reliability of our weather information. Please be patient as we update the codebase to reflect this new integration. Services may be limited during this transition period.
 
 A beautiful, modern weather application built with React featuring liquid glass design, animated weather effects, and comprehensive weather data visualization.
 
@@ -15,6 +13,8 @@ A beautiful, modern weather application built with React featuring liquid glass 
 - **Comprehensive Charts** - Temperature trends, yearly statistics, and data visualization
 - **Accessibility Features** - High contrast, large text, and reduced motion options
 - **Customizable Settings** - Default location, units, themes, and preferences
+
+---
 
 ## Setup
 
