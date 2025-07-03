@@ -73,6 +73,36 @@ const WeatherApp = () => {
         condition: mapWeatherCondition(item.weather[0].id)
       }));
     
+    const hourlyForecast = forecastData.list
+      .slice(0, 24)
+      .map(item => ({
+        time: new Date(item.dt * 1000).getHours(),
+        temperature: Math.round(item.main.temp),
+        condition: mapWeatherCondition(item.weather[0].id),
+        humidity: item.main.humidity
+      }));
+    
+    const now = new Date();
+    const isAprilFools = now.getMonth() === 3 && now.getDate() === 1;
+    
+    if (isAprilFools) {
+      return {
+        city: currentData.name,
+        country: currentData.sys.country,
+        temperature: 999,
+        condition: 'sunny',
+        description: 'raining cats and dogs',
+        humidity: 420,
+        windSpeed: 88,
+        visibility: 0,
+        feelsLike: -273,
+        pressure: 9001,
+        uvIndex: 42,
+        forecast: forecast.map(day => ({ ...day, high: 999, low: -999, condition: 'snowy' })),
+        hourlyForecast: Array(12).fill().map((_, i) => ({ time: i, temperature: 999, condition: 'snowy', humidity: 420 }))
+      };
+    }
+    
     return {
       city: currentData.name,
       country: currentData.sys.country,
@@ -85,7 +115,8 @@ const WeatherApp = () => {
       feelsLike: Math.round(currentData.main.feels_like),
       pressure: currentData.main.pressure,
       uvIndex: 0,
-      forecast
+      forecast,
+      hourlyForecast
     };
   };
 
@@ -263,7 +294,12 @@ const WeatherApp = () => {
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className={`text-2xl font-light text-white/90 ${settings.largeText ? 'text-3xl' : ''}`}>
-            {currentScreen === 'weather' ? 'Weather' : currentScreen === 'map' ? 'Weather Map' : 'Settings'}
+            {(() => {
+              const now = new Date();
+              const isAprilFools = now.getMonth() === 3 && now.getDate() === 1;
+              if (isAprilFools && currentScreen === 'weather') return '🌈 Magical Weather ✨';
+              return currentScreen === 'weather' ? 'Weather' : currentScreen === 'map' ? 'Weather Map' : 'Settings';
+            })()}
           </h1>
           <div className="flex items-center space-x-4">
             {currentScreen === 'weather' ? (
@@ -401,6 +437,26 @@ const WeatherApp = () => {
               ))}
             </div>
 
+            <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-4 sm:p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500 mb-6 sm:mb-8" style={{animationDelay: '180ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
+              <h3 className="text-white/90 text-lg font-light mb-4 sm:mb-6">24-Hour Forecast</h3>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-3 pb-2" style={{minWidth: 'max-content'}}>
+                  {weather.hourlyForecast.slice(0, 12).map((hour, index) => (
+                    <div key={index} className="flex-shrink-0 text-center bg-white/10 rounded-2xl p-3 min-w-[70px] hover:bg-white/15 transition-all duration-300">
+                      <div className="text-white/70 text-xs mb-2">
+                        {hour.time === new Date().getHours() ? 'Now' : `${hour.time}:00`}
+                      </div>
+                      <div className="flex justify-center mb-2">
+                        {getWeatherIcon(hour.condition, 'w-5 h-5')}
+                      </div>
+                      <div className="text-white text-sm font-light mb-1">{hour.temperature}°</div>
+                      <div className="text-white/60 text-xs">{hour.humidity}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
             <div className="bg-white/8 backdrop-blur-xl rounded-3xl p-6 border border-white/15 shadow-xl hover:bg-white/12 hover:border-white/25 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{animationDelay: '200ms', backdropFilter: 'blur(18px) saturate(160%)'}}>
               <h3 className="text-white/90 text-lg font-light mb-6">5-Day Forecast</h3>
               <div className="grid grid-cols-5 gap-4">
