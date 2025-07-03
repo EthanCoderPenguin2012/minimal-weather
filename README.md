@@ -1,5 +1,7 @@
 # Minimal Weather
 
+>[!NOTE] Hey! We are currently transitioning from **OpenWeatherMap** to **Ambee** for our weather data API. This change will enhance the accuracy and reliability of our weather information. Please be patient as we update the codebase to reflect this new integration. Services may be limited during this transition period.
+
 A beautiful, modern weather application built with React featuring liquid glass design, animated weather effects, and comprehensive weather data visualization.
 
 ## Features
@@ -17,10 +19,10 @@ A beautiful, modern weather application built with React featuring liquid glass 
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Get an API key from [OpenWeatherMap](https://openweathermap.org/api)
+3. Get an API key from [Ambee](https://www.getambee.com/)
 4. Create a `.env` file in the root directory:
    ```
-   REACT_APP_OPENWEATHER_API_KEY=your_api_key_here
+   REACT_APP_AMBEE_API_KEY=your_api_key_here
    ```
 5. Start the development server: `npm start`
 
@@ -33,8 +35,8 @@ A beautiful, modern weather application built with React featuring liquid glass 
    ```
 3. Go to your repository Settings → Secrets and variables → Actions
 4. Add a new repository secret:
-   - **Name:** `REACT_APP_OPENWEATHER_API_KEY`
-   - **Value:** Your OpenWeatherMap API key
+   - **Name:** `REACT_APP_AMBEE_API_KEY`
+   - **Value:** Your Ambee API key
 5. Push to the `main` branch - the app will automatically deploy to GitHub Pages
 6. Enable GitHub Pages in repository Settings → Pages → Source: GitHub Actions
 
@@ -43,7 +45,7 @@ A beautiful, modern weather application built with React featuring liquid glass 
 - React 18
 - Tailwind CSS
 - Lucide React Icons
-- OpenWeatherMap API
+- Ambee Weather API
 
 ## License
 
