@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Cloud, Sun, CloudRain, CloudSnow, Wind, Eye, Droplets, Thermometer, MapPin, Search, Loader, Settings, ArrowLeft, Map } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Cloud, Sun, CloudRain, CloudSnow, Wind, Eye, Droplets, Thermometer, MapPin, Search, Loader, Settings, ArrowLeft, Map, Globe, Volume2, VolumeX } from 'lucide-react';
 import './animations.css';
+import { useTranslation, availableLanguages } from './i18n';
 
 const WeatherApp = () => {
   const [weather, setWeather] = useState(null);
@@ -19,16 +20,21 @@ const WeatherApp = () => {
   const [settings, setSettings] = useState({
     defaultLocation: 'London',
     units: 'metric',
+    language: 'en-us',
     highContrast: false,
     largeText: false,
     reducedMotion: false,
+    soundEnabled: true,
     autoRefresh: true,
     notifications: false,
     darkMode: true,
     showAnimations: true,
     refreshInterval: '5',
-    theme: 'auto'
+    theme: 'auto',
+    keyboardNavigation: true
   });
+  
+  const { t } = useTranslation(settings.language);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -130,7 +136,7 @@ const WeatherApp = () => {
       }
     } catch (error) {
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout - please try again');
+        throw new Error(t('timeout'));
       }
       console.log('Ambee API failed, falling back to OpenWeatherMap');
     }
@@ -154,13 +160,13 @@ const WeatherApp = () => {
       
       if (!currentResponse.ok) {
         if (currentResponse.status === 404) {
-          throw new Error('City not found - please check spelling');
+          throw new Error(t('cityNotFound'));
         } else if (currentResponse.status === 401) {
-          throw new Error('API key invalid - please check configuration');
+          throw new Error(t('apiKey'));
         } else if (currentResponse.status >= 500) {
-          throw new Error('Weather service temporarily unavailable');
+          throw new Error(t('serverError'));
         }
-        throw new Error('Failed to fetch weather data');
+        throw new Error(t('failedToLoad'));
       }
       
       currentData = await currentResponse.json();
@@ -168,10 +174,10 @@ const WeatherApp = () => {
       
     } catch (error) {
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout - please check your connection');
+        throw new Error(t('timeout'));
       }
       if (error.message.includes('Failed to fetch')) {
-        throw new Error('Network error - please check your internet connection');
+        throw new Error(t('network'));
       }
       throw error;
     }
@@ -278,7 +284,7 @@ const WeatherApp = () => {
 
   const searchWeather = async (city = location) => {
     if (!city.trim()) {
-      setError('Please enter a city name');
+      setError(t('enterCity'));
       return;
     }
     
@@ -292,16 +298,29 @@ const WeatherApp = () => {
       setWeather(weatherData);
       setLocation('');
       setError('');
+      
+      // Sound feedback
+      if (settings.soundEnabled) {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+        audio.volume = 0.1;
+        audio.play().catch(() => {});
+      }
     } catch (error) {
       console.error('Weather fetch error:', error);
-      setError(error.message || 'Failed to fetch weather data');
+      setError(error.message || t('failedToLoad'));
       setApiError(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSuggestions = async (query) => {
+  const popularCities = [
+    'London,UK', 'New York,US', 'Tokyo,JP', 'Paris,FR', 'Sydney,AU', 'Berlin,DE',
+    'Madrid,ES', 'Rome,IT', 'Moscow,RU', 'Beijing,CN', 'Mumbai,IN', 'Cairo,EG',
+    'São Paulo,BR', 'Mexico City,MX', 'Toronto,CA', 'Buenos Aires,AR'
+  ];
+  
+  const fetchSuggestions = useCallback(async (query) => {
     if (query.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -309,29 +328,33 @@ const WeatherApp = () => {
     }
     
     try {
-      const cities = ['London,UK', 'New York,US', 'Tokyo,JP', 'Paris,FR', 'Sydney,AU'];
-      const filtered = cities.filter(city => 
-        city.toLowerCase().includes(query.toLowerCase())
-      ).map(city => {
-        const [name, country] = city.split(',');
-        return {
-          name,
-          country,
-          display: `${name}, ${country}`
-        };
-      });
+      const filtered = popularCities
+        .filter(city => city.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 5)
+        .map(city => {
+          const [name, country] = city.split(',');
+          return { name, country, display: `${name}, ${country}` };
+        });
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
     } catch (error) {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  };
+  }, []);
+  
+  // Debounced search
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  const debouncedSearch = useCallback((query) => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    const timeout = setTimeout(() => fetchSuggestions(query), 300);
+    setSearchTimeout(timeout);
+  }, [fetchSuggestions, searchTimeout]);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
     setLocation(value);
-    fetchSuggestions(value);
+    debouncedSearch(value);
   };
 
   const selectSuggestion = (suggestion) => {
@@ -345,6 +368,9 @@ const WeatherApp = () => {
       searchWeather();
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
+    } else if (e.key === 'ArrowDown' && suggestions.length > 0) {
+      e.preventDefault();
+      setShowSuggestions(true);
     }
   };
 
@@ -374,7 +400,7 @@ const WeatherApp = () => {
         setError('');
       } catch (error) {
         console.error('Initial weather load error:', error);
-        setError(error.message || 'Failed to load initial weather data');
+        setError(error.message || t('failedToLoad'));
         setApiError(error);
       } finally {
         setIsInitialLoading(false);
@@ -581,7 +607,8 @@ const WeatherApp = () => {
             ) : error && !weather ? (
               <ErrorDisplay 
                 error={error} 
-                onRetry={() => searchWeather(settings.defaultLocation)} 
+                onRetry={() => searchWeather(settings.defaultLocation)}
+                t={t}
               />
             ) : weather ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -838,6 +865,25 @@ const WeatherApp = () => {
         {currentScreen === 'settings' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30">
+              <h2 className={`text-lg font-light text-white mb-4 ${settings.largeText ? 'text-xl' : ''}`}>Language / Idioma / Langue</h2>
+              <select
+                value={settings.language}
+                onChange={(e) => {
+                  const newSettings = { ...settings, language: e.target.value };
+                  setSettings(newSettings);
+                  localStorage.setItem('weatherSettings', JSON.stringify(newSettings));
+                }}
+                className="w-full px-4 py-3 bg-white/20 backdrop-blur-md rounded-xl text-white border border-white/30 focus:outline-none focus:border-white/50 mb-6"
+              >
+                {availableLanguages.map(lang => (
+                  <option key={lang.code} value={lang.code} className="bg-gray-800">
+                    {lang.flag} {lang.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30">
               <h2 className={`text-lg font-light text-white mb-4 ${settings.largeText ? 'text-xl' : ''}`}>Default Location</h2>
               <input
                 type="text"
@@ -908,8 +954,27 @@ const WeatherApp = () => {
                       localStorage.setItem('weatherSettings', JSON.stringify(newSettings));
                     }}
                     className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 ${settings.reducedMotion ? 'bg-purple-500' : 'bg-white/30'}`}
+                    aria-label="Toggle reduced motion"
                   >
                     <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 transform ${settings.reducedMotion ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-white/70" /> : <VolumeX className="w-4 h-4 text-white/70" />}
+                    <span className={`text-white/80 ${settings.largeText ? 'text-lg' : ''}`}>Sound Effects</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newSettings = { ...settings, soundEnabled: !settings.soundEnabled };
+                      setSettings(newSettings);
+                      localStorage.setItem('weatherSettings', JSON.stringify(newSettings));
+                    }}
+                    className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 ${settings.soundEnabled ? 'bg-green-500' : 'bg-white/30'}`}
+                    aria-label="Toggle sound effects"
+                  >
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 transform ${settings.soundEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                   </button>
                 </div>
               </div>
@@ -1155,41 +1220,43 @@ const WeatherApp = () => {
 
 export default WeatherApp;
 
-// Loading skeleton component
+// Enhanced loading skeleton component
 const LoadingSkeleton = () => (
-  <div className="animate-pulse space-y-6">
-    <div className="glass-card rounded-3xl p-8">
+  <div className="animate-pulse space-y-6" role="status" aria-label="Loading weather data">
+    <div className="glass-card rounded-3xl p-8 animate-shimmer">
       <div className="flex items-center justify-between mb-6">
-        <div className="h-6 bg-white/20 rounded w-32"></div>
+        <div className="h-6 bg-white/20 rounded w-32 animate-liquid"></div>
         <div className="h-4 bg-white/20 rounded w-24"></div>
       </div>
       <div className="flex items-center space-x-6">
-        <div className="w-16 h-16 bg-white/20 rounded-full"></div>
+        <div className="w-16 h-16 bg-white/20 rounded-full animate-float"></div>
         <div className="space-y-2">
-          <div className="h-12 bg-white/20 rounded w-24"></div>
+          <div className="h-12 bg-white/20 rounded w-24 animate-number-pop"></div>
           <div className="h-4 bg-white/20 rounded w-32"></div>
         </div>
       </div>
     </div>
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="glass-card rounded-2xl p-4 h-24"></div>
+        <div key={i} className="glass-card rounded-2xl p-4 h-24 animate-float" style={{animationDelay: `${i * 100}ms`}}></div>
       ))}
     </div>
+    <div className="sr-only">Loading weather information...</div>
   </div>
 );
 
-// Error display component
-const ErrorDisplay = ({ error, onRetry }) => (
-  <div className="glass-card rounded-3xl p-8 text-center">
-    <div className="text-red-400 text-6xl mb-4">⚠️</div>
-    <h3 className="text-white text-xl font-light mb-2">Oops! Something went wrong</h3>
+// Enhanced error display component
+const ErrorDisplay = ({ error, onRetry, t }) => (
+  <div className="glass-card rounded-3xl p-8 text-center animate-float" role="alert" aria-live="polite">
+    <div className="text-red-400 text-6xl mb-4 animate-pulse-glow">⚠️</div>
+    <h3 className="text-white text-xl font-light mb-2">{t('error')}</h3>
     <p className="text-white/70 mb-6">{error}</p>
     <button 
       onClick={onRetry}
-      className="glass-button px-6 py-3 rounded-xl text-white font-light hover:scale-105 transition-transform"
+      className="glass-button px-6 py-3 rounded-xl text-white font-light hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-white/50"
+      aria-label={`${t('tryAgain')} - ${error}`}
     >
-      Try Again
+      {t('tryAgain')}
     </button>
   </div>
 );

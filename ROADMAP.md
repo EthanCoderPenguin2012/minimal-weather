@@ -14,26 +14,22 @@
 - [x] Error handling and loading states
 
 ## 0.5 - The bountiful update
-- [ ] More language support
-- [ ] Improved error handling
-- [ ] Enhanced loading animations
-- [ ] Improved accessibility features
-- [ ] Improved search functionality
+- [x] More language support
+- [x] Improved error handling
+- [x] Enhanced loading animations
+- [x] Improved accessibility features
+- [x] Improved search functionality
 
 ## v1.0 - Desktop Support
 - [ ] Integrate Electron for cross-platform desktop app
 - [ ] Package app for Windows, macOS, Linux
 - [ ] Official 1.0 release on GitHub
 
-## v1.2 - Enhancements
-- [ ] 5-day weather forecast
-- [ ] User location detection
-- [ ] Theme support (light/dark)
+## v1.1 - Mobile Support
+- [ ] Integrate React Native for mobile app
+- [ ] Package app for iOS and Android
+- [ ] Official 1.1 release on GitHub
 
-## v1.3 - Advanced Features
-- [ ] Settings panel (units, API key)
-- [ ] System tray integration (Electron)
-- [ ] Auto-update support
 
 ---
 
