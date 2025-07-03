@@ -43,7 +43,8 @@ const WeatherApp = () => {
     };
   }, [selectedDay]);
 
-  const API_KEY = process.env.REACT_APP_AMBEE_API_KEY || process.env.AMBEE_API_KEY;
+  const AMBEE_API_KEY = process.env.REACT_APP_AMBEE_API_KEY || process.env.AMBEE_API_KEY;
+  const OPENWEATHER_API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || 'cbf335035c93d088e8f124a2c8bd05a7';
 
   const mapWeatherCondition = (weatherId) => {
     if (weatherId >= 200 && weatherId < 600) return 'rainy';
@@ -54,42 +55,100 @@ const WeatherApp = () => {
   };
 
   const fetchWeatherData = async (city) => {
-    if (!API_KEY) throw new Error('API key not found');
+    try {
+      if (AMBEE_API_KEY) {
+        const geoResponse = await fetch(`https://api.ambeedata.com/weather/latest/by-city?city=${city}`, {
+          headers: { 'x-api-key': AMBEE_API_KEY }
+        });
+        
+        if (geoResponse.ok) {
+          const currentData = await geoResponse.json();
+          const forecastResponse = await fetch(`https://api.ambeedata.com/weather/forecast/by-city?city=${city}`, {
+            headers: { 'x-api-key': AMBEE_API_KEY }
+          });
+          const forecastData = await forecastResponse.json();
+          
+          // Ambee API processing (existing code)
+          const forecast = forecastData.data
+            .slice(0, 5)
+            .map((item, index) => ({
+              day: index === 0 ? 'Today' : new Date(item.time).toLocaleDateString('en', { weekday: 'short' }),
+              high: Math.round(item.temperature),
+              low: Math.round(item.temperature - 5),
+              condition: item.summary.toLowerCase().includes('rain') ? 'rainy' : 
+                        item.summary.toLowerCase().includes('cloud') ? 'cloudy' :
+                        item.summary.toLowerCase().includes('snow') ? 'snowy' : 'sunny'
+            }));
+          
+          const hourlyForecast = Array.from({ length: 12 }, (_, i) => {
+            const hour = (new Date().getHours() + i) % 24;
+            const baseTemp = currentData.data.temperature;
+            const tempVariation = Math.sin((hour - 12) * Math.PI / 12) * 5 + Math.random() * 3 - 1.5;
+            return {
+              time: hour,
+              temperature: Math.round(baseTemp + tempVariation),
+              condition: currentData.data.summary.toLowerCase().includes('rain') ? 'rainy' : 
+                        currentData.data.summary.toLowerCase().includes('cloud') ? 'cloudy' :
+                        currentData.data.summary.toLowerCase().includes('snow') ? 'snowy' : 'sunny',
+              humidity: Math.max(20, Math.min(100, currentData.data.humidity + Math.random() * 20 - 10))
+            };
+          });
+          
+          return {
+            city: currentData.data.city,
+            country: currentData.data.countryCode,
+            lat: currentData.data.lat,
+            lon: currentData.data.lng,
+            temperature: Math.round(currentData.data.temperature),
+            condition: currentData.data.summary.toLowerCase().includes('rain') ? 'rainy' : 
+                      currentData.data.summary.toLowerCase().includes('cloud') ? 'cloudy' :
+                      currentData.data.summary.toLowerCase().includes('snow') ? 'snowy' : 'sunny',
+            description: currentData.data.summary,
+            humidity: currentData.data.humidity,
+            windSpeed: Math.round(currentData.data.windSpeed),
+            visibility: Math.round(currentData.data.visibility),
+            feelsLike: Math.round(currentData.data.apparentTemperature),
+            pressure: currentData.data.pressure,
+            uvIndex: currentData.data.uvIndex || 0,
+            forecast,
+            hourlyForecast
+          };
+        }
+      }
+    } catch (error) {
+      console.log('Ambee API failed, falling back to OpenWeatherMap');
+    }
     
-    const geoResponse = await fetch(`https://api.ambeedata.com/weather/latest/by-city?city=${city}`, {
-      headers: { 'x-api-key': API_KEY }
-    });
+    // Fallback to OpenWeatherMap
+    const [currentResponse, forecastResponse] = await Promise.all([
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${OPENWEATHER_API_KEY}&units=metric`),
+      fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${OPENWEATHER_API_KEY}&units=metric`)
+    ]);
     
-    if (!geoResponse.ok) throw new Error('City not found');
+    if (!currentResponse.ok) throw new Error('City not found');
     
-    const currentData = await geoResponse.json();
-    const forecastResponse = await fetch(`https://api.ambeedata.com/weather/forecast/by-city?city=${city}`, {
-      headers: { 'x-api-key': API_KEY }
-    });
+    const currentData = await currentResponse.json();
     const forecastData = await forecastResponse.json();
     
-    const forecast = forecastData.data
+    const forecast = forecastData.list
+      .filter((_, index) => index % 8 === 0)
       .slice(0, 5)
       .map((item, index) => ({
-        day: index === 0 ? 'Today' : new Date(item.time).toLocaleDateString('en', { weekday: 'short' }),
-        high: Math.round(item.temperature),
-        low: Math.round(item.temperature - 5),
-        condition: item.summary.toLowerCase().includes('rain') ? 'rainy' : 
-                  item.summary.toLowerCase().includes('cloud') ? 'cloudy' :
-                  item.summary.toLowerCase().includes('snow') ? 'snowy' : 'sunny'
+        day: index === 0 ? 'Today' : new Date(item.dt * 1000).toLocaleDateString('en', { weekday: 'short' }),
+        high: Math.round(item.main.temp_max),
+        low: Math.round(item.main.temp_min),
+        condition: mapWeatherCondition(item.weather[0].id)
       }));
     
     const hourlyForecast = Array.from({ length: 12 }, (_, i) => {
       const hour = (new Date().getHours() + i) % 24;
-      const baseTemp = currentData.data.temperature;
+      const baseTemp = currentData.main.temp;
       const tempVariation = Math.sin((hour - 12) * Math.PI / 12) * 5 + Math.random() * 3 - 1.5;
       return {
         time: hour,
         temperature: Math.round(baseTemp + tempVariation),
-        condition: currentData.data.summary.toLowerCase().includes('rain') ? 'rainy' : 
-                  currentData.data.summary.toLowerCase().includes('cloud') ? 'cloudy' :
-                  currentData.data.summary.toLowerCase().includes('snow') ? 'snowy' : 'sunny',
-        humidity: Math.max(20, Math.min(100, currentData.data.humidity + Math.random() * 20 - 10))
+        condition: mapWeatherCondition(currentData.weather[0].id),
+        humidity: Math.max(20, Math.min(100, currentData.main.humidity + Math.random() * 20 - 10))
       };
     });
     
@@ -98,10 +157,10 @@ const WeatherApp = () => {
     
     if (isAprilFools) {
       return {
-        city: currentData.data.city,
-        country: currentData.data.countryCode,
-        lat: currentData.data.lat,
-        lon: currentData.data.lng,
+        city: currentData.name,
+        country: currentData.sys.country,
+        lat: currentData.coord.lat,
+        lon: currentData.coord.lon,
         temperature: 999,
         condition: 'sunny',
         description: 'raining cats and dogs',
@@ -117,21 +176,19 @@ const WeatherApp = () => {
     }
     
     return {
-      city: currentData.data.city,
-      country: currentData.data.countryCode,
-      lat: currentData.data.lat,
-      lon: currentData.data.lng,
-      temperature: Math.round(currentData.data.temperature),
-      condition: currentData.data.summary.toLowerCase().includes('rain') ? 'rainy' : 
-                currentData.data.summary.toLowerCase().includes('cloud') ? 'cloudy' :
-                currentData.data.summary.toLowerCase().includes('snow') ? 'snowy' : 'sunny',
-      description: currentData.data.summary,
-      humidity: currentData.data.humidity,
-      windSpeed: Math.round(currentData.data.windSpeed),
-      visibility: Math.round(currentData.data.visibility),
-      feelsLike: Math.round(currentData.data.apparentTemperature),
-      pressure: currentData.data.pressure,
-      uvIndex: currentData.data.uvIndex || 0,
+      city: currentData.name,
+      country: currentData.sys.country,
+      lat: currentData.coord.lat,
+      lon: currentData.coord.lon,
+      temperature: Math.round(currentData.main.temp),
+      condition: mapWeatherCondition(currentData.weather[0].id),
+      description: currentData.weather[0].description,
+      humidity: currentData.main.humidity,
+      windSpeed: Math.round(currentData.wind.speed * 3.6),
+      visibility: Math.round(currentData.visibility / 1000),
+      feelsLike: Math.round(currentData.main.feels_like),
+      pressure: currentData.main.pressure,
+      uvIndex: 0,
       forecast,
       hourlyForecast
     };
