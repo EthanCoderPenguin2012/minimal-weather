@@ -12,6 +12,7 @@ const WeatherApp = () => {
   const [cities, setCities] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('weather');
   const [selectedDay, setSelectedDay] = useState(null);
+  const [mapLayer, setMapLayer] = useState('precipitation');
   const [settings, setSettings] = useState({
     defaultLocation: 'London',
     units: 'metric',
@@ -89,6 +90,8 @@ const WeatherApp = () => {
       return {
         city: currentData.name,
         country: currentData.sys.country,
+        lat: currentData.coord.lat,
+        lon: currentData.coord.lon,
         temperature: 999,
         condition: 'sunny',
         description: 'raining cats and dogs',
@@ -99,13 +102,15 @@ const WeatherApp = () => {
         pressure: 9001,
         uvIndex: 42,
         forecast: forecast.map(day => ({ ...day, high: 999, low: -999, condition: 'snowy' })),
-        hourlyForecast: Array(12).fill().map((_, i) => ({ time: i, temperature: 999, condition: 'snowy', humidity: 420 }))
+        hourlyForecast: Array(12).fill(null).map((_, i) => ({ time: i, temperature: 999, condition: 'snowy', humidity: 420 }))
       };
     }
     
     return {
       city: currentData.name,
       country: currentData.sys.country,
+      lat: currentData.coord.lat,
+      lon: currentData.coord.lon,
       temperature: Math.round(currentData.main.temp),
       condition: mapWeatherCondition(currentData.weather[0].id),
       description: currentData.weather[0].description,
@@ -132,8 +137,19 @@ const WeatherApp = () => {
   };
 
   const getGradientBackground = (condition) => {
+    if (condition === 'sunny') {
+      const hour = currentTime.getHours();
+      if (hour >= 6 && hour < 8) {
+        return 'from-orange-400 via-pink-400 to-blue-500'; // Sunrise
+      } else if (hour >= 8 && hour < 18) {
+        return 'from-blue-400 via-blue-500 to-blue-600'; // Day
+      } else if (hour >= 18 && hour < 20) {
+        return 'from-blue-500 via-orange-400 to-pink-500'; // Sunset
+      } else {
+        return 'from-gray-900 via-blue-900 to-black'; // Night
+      }
+    }
     switch(condition) {
-      case 'sunny': return 'from-amber-400 via-orange-500 to-red-500';
       case 'cloudy': return 'from-slate-400 via-slate-500 to-slate-600';
       case 'rainy': return 'from-slate-600 via-blue-600 to-blue-700';
       case 'snowy': return 'from-slate-300 via-blue-400 to-blue-500';
@@ -241,18 +257,35 @@ const WeatherApp = () => {
       <div className="absolute inset-0 bg-black/10 backdrop-blur-sm">
         {weather && weather.condition === 'sunny' && (
           <div className="absolute inset-0">
-            <div 
-              className="absolute w-16 h-16 bg-yellow-300/30 rounded-full blur-sm animate-pulse transition-all duration-1000"
-              style={{
-                left: `${((currentTime.getHours() - 6) / 12) * 80 + 10}%`,
-                top: `${50 - Math.sin(((currentTime.getHours() - 6) / 12) * Math.PI) * 30}%`,
-                transform: 'translate(-50%, -50%)'
-              }}
-            >
-              <div className="absolute inset-2 bg-yellow-400/40 rounded-full animate-spin-slow">
-                <div className="absolute inset-1 bg-yellow-200/50 rounded-full"></div>
+            {currentTime.getHours() >= 6 && currentTime.getHours() < 20 ? (
+              <div 
+                className="absolute w-16 h-16 bg-yellow-300/30 rounded-full blur-sm animate-pulse transition-all duration-1000"
+                style={{
+                  left: `${((currentTime.getHours() - 6) / 12) * 80 + 10}%`,
+                  top: `${50 - Math.sin(((currentTime.getHours() - 6) / 12) * Math.PI) * 30}%`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <div className="absolute inset-2 bg-yellow-400/40 rounded-full animate-spin-slow">
+                  <div className="absolute inset-1 bg-yellow-200/50 rounded-full"></div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div 
+                className="absolute w-12 h-12 bg-gray-200/40 rounded-full transition-all duration-1000"
+                style={{
+                  left: `${((currentTime.getHours() + 6) / 12) * 80 + 10}%`,
+                  top: `${30 + Math.sin(((currentTime.getHours() + 6) / 12) * Math.PI) * 20}%`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <div className="absolute inset-0 bg-gray-300/30 rounded-full">
+                  <div className="absolute top-1 left-1 w-2 h-2 bg-gray-400/50 rounded-full"></div>
+                  <div className="absolute bottom-2 right-1 w-1 h-1 bg-gray-400/40 rounded-full"></div>
+                  <div className="absolute top-3 right-2 w-1.5 h-1.5 bg-gray-400/30 rounded-full"></div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {weather && weather.condition === 'cloudy' && (
@@ -1179,30 +1212,57 @@ const WeatherApp = () => {
         {currentScreen === 'map' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-              <button className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30 hover:bg-white/25 transition-all duration-300 text-left">
+              <button 
+                onClick={() => setMapLayer('precipitation')}
+                className={`backdrop-blur-lg rounded-3xl p-6 border transition-all duration-300 text-left ${
+                  mapLayer === 'precipitation' 
+                    ? 'bg-white/30 border-white/50' 
+                    : 'bg-white/20 border-white/30 hover:bg-white/25'
+                }`}
+              >
                 <h3 className="text-white text-lg font-light mb-2">Precipitation</h3>
                 <p className="text-white/70 text-sm">View rainfall and snow patterns</p>
               </button>
               
-              <button className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30 hover:bg-white/25 transition-all duration-300 text-left">
+              <button 
+                onClick={() => setMapLayer('temp')}
+                className={`backdrop-blur-lg rounded-3xl p-6 border transition-all duration-300 text-left ${
+                  mapLayer === 'temp' 
+                    ? 'bg-white/30 border-white/50' 
+                    : 'bg-white/20 border-white/30 hover:bg-white/25'
+                }`}
+              >
                 <h3 className="text-white text-lg font-light mb-2">Temperature</h3>
                 <p className="text-white/70 text-sm">See temperature variations</p>
               </button>
               
-              <button className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30 hover:bg-white/25 transition-all duration-300 text-left">
+              <button 
+                onClick={() => setMapLayer('wind')}
+                className={`backdrop-blur-lg rounded-3xl p-6 border transition-all duration-300 text-left ${
+                  mapLayer === 'wind' 
+                    ? 'bg-white/30 border-white/50' 
+                    : 'bg-white/20 border-white/30 hover:bg-white/25'
+                }`}
+              >
                 <h3 className="text-white text-lg font-light mb-2">Wind Patterns</h3>
                 <p className="text-white/70 text-sm">Track wind speed and direction</p>
               </button>
             </div>
             
             <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/30">
-              <h3 className="text-white text-lg font-light mb-4">Interactive Weather Map</h3>
-              <div className="bg-white/10 rounded-2xl h-96 flex items-center justify-center border border-white/20">
-                <div className="text-center">
-                  <Map className="w-16 h-16 text-white/50 mx-auto mb-4" />
-                  <p className="text-white/70">Weather map integration coming soon</p>
-                  <p className="text-white/50 text-sm mt-2">Connect with mapping service for live weather data</p>
-                </div>
+              <h3 className="text-white text-lg font-light mb-4">Interactive Weather Map - {mapLayer === 'precipitation' ? 'Precipitation' : mapLayer === 'temp' ? 'Temperature' : 'Wind Patterns'}</h3>
+              <div className="bg-white/10 rounded-2xl overflow-hidden border border-white/20">
+                <iframe
+                  src={`https://openweathermap.org/weathermap?basemap=map&cities=true&layer=${mapLayer}&lat=${weather?.lat || 51.5074}&lon=${weather?.lon || -0.1278}&zoom=5`}
+                  width="100%"
+                  height="400"
+                  style={{ border: 'none' }}
+                  title="Weather Map"
+                  className="rounded-2xl"
+                />
+              </div>
+              <div className="mt-4 text-center">
+                <p className="text-white/60 text-sm">Interactive weather map powered by OpenWeatherMap</p>
               </div>
             </div>
           </div>
